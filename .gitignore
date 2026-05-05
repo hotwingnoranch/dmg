@@ -1,0 +1,29 @@
+
+# InsForge & AI agent skills
+.insforge
+.agent
+.agents
+.augment
+.claude
+.cline
+.github/copilot*
+.kilocode
+.qoder
+.qwen
+.roo
+.trae
+.windsurf
+
+# OS / IDE clutter
+desktop.ini
+.DS_Store
+*.swp
+
+# Reference screenshots from the bark.com flow — kept locally, not in the repo
+web_examples/
+
+# Belt-and-suspenders env protection (web/.gitignore already covers .env*)
+.env
+.env.*
+!.env.example
+!web/.env.example

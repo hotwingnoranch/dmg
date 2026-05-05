@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-ink-900 text-ink-50 font-sans antialiased;
+    background-color: #f6f5f2;
+    background-image:
+      radial-gradient(80% 60% at 50% 0%, rgba(11, 23, 48, 0.06) 0%, rgba(246, 245, 242, 0) 60%),
+      radial-gradient(40% 40% at 90% 10%, rgba(200, 151, 63, 0.10) 0%, rgba(246, 245, 242, 0) 60%);
+  }
+
+  ::selection {
+    background: rgba(168, 122, 37, 0.25);
+    color: #0c0a09;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-6 lg:px-10;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium tracking-wide transition focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-700/40 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-navy-900 text-white hover:bg-navy-800 shadow-[0_8px_28px_-12px_rgba(11,23,48,0.45)];
+  }
+  .btn-amber {
+    @apply btn bg-amber-accent text-white hover:bg-amber-deep shadow-[0_8px_28px_-12px_rgba(168,122,37,0.55)];
+  }
+  .btn-ghost {
+    @apply btn text-ink-100 hover:bg-ink-800;
+  }
+  .btn-outline {
+    @apply btn border border-ink-500 text-ink-50 hover:border-navy-700 hover:text-navy-700 hover:bg-white;
+  }
+
+  .card {
+    @apply rounded-2xl border border-ink-600 bg-white shadow-card;
+  }
+  .card-elev {
+    @apply rounded-2xl border border-ink-600 bg-white shadow-card-strong;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-ink-500 bg-white px-4 py-3 text-sm text-ink-50 placeholder:text-ink-400 focus:border-navy-700 focus:outline-none focus:ring-2 focus:ring-navy-700/15;
+  }
+
+  .label {
+    @apply text-xs font-medium uppercase tracking-[0.18em] text-ink-300;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-ink-600 bg-white px-3 py-1 text-xs font-medium text-ink-100;
+  }
+
+  .display-h1 {
+    @apply font-display text-5xl md:text-7xl tracking-tightest leading-[0.95];
+  }
+  .display-h2 {
+    @apply font-display text-3xl md:text-5xl tracking-tightest leading-[1.05];
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-amber-accent;
+  }
+
+  .surface-soft {
+    @apply rounded-2xl border border-ink-600 bg-ink-900;
+  }
+}
+
+.bg-grid-faint {
+  background-size: 56px 56px;
+}
