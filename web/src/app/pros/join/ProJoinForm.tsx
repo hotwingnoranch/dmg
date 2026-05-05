@@ -83,10 +83,22 @@ export function ProJoinForm({
             </select>
           </label>
         </div>
-        <label className="grid gap-2">
-          <span className="label">Phone</span>
-          <input name="phone" type="tel" className="input" placeholder="(555) 555-0123" />
-        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-2">
+            <span className="label">Phone</span>
+            <input name="phone" type="tel" className="input" placeholder="(555) 555-0123" />
+          </label>
+          <label className="grid gap-2">
+            <span className="label">Website</span>
+            <input
+              name="website"
+              type="url"
+              inputMode="url"
+              className="input"
+              placeholder="https://your-site.com"
+            />
+          </label>
+        </div>
       </div>
 
       <hr className="border-ink-50/5" />
@@ -157,7 +169,7 @@ export function ProJoinForm({
       </div>
 
       {state.status === "error" && (
-        <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+        <p className="rounded-lg border border-red-400 bg-red-100 px-3 py-2 text-sm text-red-900">
           {state.message}
         </p>
       )}

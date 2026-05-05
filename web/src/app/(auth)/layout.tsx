@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Logo } from "@/components/Logo";
+import Image from "next/image";
+import { LogoFull } from "@/components/Logo";
+import { AUTH_IMAGE } from "@/lib/images";
 import { ShieldCheck, Lock, BadgeCheck } from "lucide-react";
 
 export default function AuthLayout({
@@ -10,15 +12,26 @@ export default function AuthLayout({
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
       <div className="relative flex flex-col justify-between overflow-hidden bg-navy-900 px-8 py-10 text-white lg:px-16">
+        {/* Cover photo */}
+        <Image
+          aria-hidden
+          src={AUTH_IMAGE}
+          alt=""
+          fill
+          sizes="(min-width: 1024px) 55vw, 100vw"
+          priority
+          className="-z-20 object-cover opacity-35"
+        />
+        {/* Gradient + amber wash to keep text legible over the photo */}
         <div
           aria-hidden
           className="absolute inset-0 -z-10"
           style={{
             backgroundImage:
-              "radial-gradient(80% 60% at 0% 0%, rgba(200,151,63,0.18) 0%, rgba(11,23,48,0) 60%), radial-gradient(60% 60% at 100% 100%, rgba(168,122,37,0.12) 0%, rgba(11,23,48,0) 70%)",
+              "linear-gradient(180deg, rgba(11,23,48,0.55) 0%, rgba(11,23,48,0.85) 60%, rgba(11,23,48,0.95) 100%), radial-gradient(80% 60% at 0% 0%, rgba(200,151,63,0.18) 0%, rgba(11,23,48,0) 60%), radial-gradient(60% 60% at 100% 100%, rgba(168,122,37,0.14) 0%, rgba(11,23,48,0) 70%)",
           }}
         />
-        <Logo className="text-white" />
+        <LogoFull width={240} />
         <div className="max-w-sm">
           <p className="text-xs uppercase tracking-[0.24em] text-amber-glow">
             A vetted directory

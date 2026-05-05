@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 
 export type ServiceCardProps = {
@@ -7,6 +8,7 @@ export type ServiceCardProps = {
   image: string;
   description?: string;
   badge?: string;
+  /** @deprecated kept for backwards compatibility — cards now render uniform tall. */
   size?: "default" | "tall";
 };
 
@@ -16,18 +18,20 @@ export function ServiceCard({
   image,
   description,
   badge,
-  size = "default",
 }: ServiceCardProps) {
-  const heightClass = size === "tall" ? "h-[420px]" : "h-[260px]";
+  const heightClass = "h-[420px]";
   return (
     <Link
       href={`/services/${slug}`}
       className={`group relative overflow-hidden rounded-2xl border border-ink-700 bg-navy-950 shadow-card ${heightClass}`}
     >
-      <span
+      <Image
         aria-hidden
-        className="absolute inset-0 bg-cover bg-center transition duration-700 group-hover:scale-105"
-        style={{ backgroundImage: `url(${image})` }}
+        src={image}
+        alt=""
+        fill
+        sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+        className="object-cover transition duration-700 group-hover:scale-105"
       />
       <span
         aria-hidden

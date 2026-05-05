@@ -39,6 +39,10 @@ const RESULT_BANNERS: Record<string, { tone: "success" | "info" | "error"; text:
     tone: "error",
     text: "Auto top-up charge failed. Card may need re-authentication.",
   },
+  insufficient: {
+    tone: "error",
+    text: "Not enough credits to respond to that lead. Top up below to continue.",
+  },
 };
 
 export default async function ProBillingPage({
@@ -221,9 +225,9 @@ export default async function ProBillingPage({
                   <span
                     className={`pill ${
                       p.status === "succeeded"
-                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700"
+                        ? "border-emerald-400 bg-emerald-100 text-emerald-900"
                         : p.status === "failed"
-                          ? "border-red-500/40 bg-red-500/10 text-red-600"
+                          ? "border-red-400 bg-red-100 text-red-900"
                           : ""
                     }`}
                   >
@@ -278,9 +282,9 @@ function Banner({
   children?: React.ReactNode;
 }) {
   const styles = {
-    success: "border-emerald-500/40 bg-emerald-500/10 text-emerald-800",
+    success: "border-emerald-400 bg-emerald-100 text-emerald-800",
     info: "border-ink-600 bg-ink-900 text-ink-200",
-    error: "border-red-500/40 bg-red-500/10 text-red-700",
+    error: "border-red-400 bg-red-100 text-red-900",
   }[tone];
   return (
     <div className={`rounded-2xl border px-5 py-4 text-sm ${styles}`}>
@@ -491,7 +495,7 @@ function SubscriptionTab({ activeSlug }: { activeSlug: string | null }) {
 
             <div className="mt-3 flex items-baseline gap-1.5">
               <span className="font-display text-4xl font-bold tracking-tightest">
-                {formatPrice(t.price_cents)}
+                {formatPrice(t.price_cents, "usd", "Free")}
               </span>
               {!isFree && (
                 <span

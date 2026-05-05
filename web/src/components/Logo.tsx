@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/cn";
 
 export function Logo({ className }: { className?: string }) {
@@ -11,28 +12,51 @@ export function Logo({ className }: { className?: string }) {
       )}
       aria-label="Vanguard Security home"
     >
-      <span className="relative inline-flex h-8 w-8 items-center justify-center">
-        <span className="absolute inset-0 rounded-md bg-navy-900 ring-1 ring-navy-900/30 transition group-hover:bg-navy-800" />
-        <svg
-          viewBox="0 0 24 24"
-          className="relative h-4 w-4 text-amber-glow"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3Z" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
+      <span className="relative inline-flex h-12 w-12 sm:h-14 sm:w-14 flex-none items-center justify-center">
+        <Image
+          src="/logo-shield.webp"
+          alt=""
+          fill
+          sizes="56px"
+          className="object-contain"
+          priority
+        />
       </span>
-      <span className="font-display text-[1.4rem] font-bold tracking-tight">
+      <span className="font-display text-[1.5rem] sm:text-[1.65rem] font-bold tracking-tight whitespace-nowrap leading-none">
         Vanguard
-        <span className="ml-1 text-amber-accent">·</span>
-        <span className="ml-1 font-sans text-xs font-medium uppercase tracking-[0.22em] text-ink-300">
-          Security
+        <span className="hidden sm:inline">
+          <span className="ml-1.5 text-amber-accent">·</span>
+          <span className="ml-1.5 font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-300">
+            Security
+          </span>
         </span>
       </span>
+    </Link>
+  );
+}
+
+/** Full lockup variant — for hero placements like the auth screen. */
+export function LogoFull({
+  className,
+  width = 220,
+}: {
+  className?: string;
+  width?: number;
+}) {
+  return (
+    <Link
+      href="/"
+      className={cn("inline-block", className)}
+      aria-label="Vanguard Security home"
+    >
+      <Image
+        src="/logo-full.webp"
+        alt="Vanguard Security"
+        width={width}
+        height={Math.round(width * 0.5625)}
+        className="h-auto w-auto"
+        priority
+      />
     </Link>
   );
 }

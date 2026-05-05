@@ -4,6 +4,7 @@ import { Footer } from "@/components/Footer";
 import { ServiceCard } from "@/components/ServiceCard";
 import { createServerClient } from "@/lib/insforge";
 import { getAccessToken, requireUser } from "@/lib/auth";
+import { isAdminEmail } from "@/lib/admin";
 import { categoryImage } from "@/lib/images";
 import { ArrowRight, CheckCircle2, Clock3 } from "lucide-react";
 
@@ -60,7 +61,7 @@ async function getOtherCategories(): Promise<Cat[]> {
 
 const STATUS_LABEL: Record<string, { label: string; tone: string }> = {
   open: { label: "Awaiting matches", tone: "text-amber-accent border-amber-accent/30 bg-amber-accent/10" },
-  matched: { label: "Quotes received", tone: "text-emerald-300 border-emerald-500/30 bg-emerald-500/10" },
+  matched: { label: "Quotes received", tone: "text-emerald-800 border-emerald-400 bg-emerald-100" },
   closed: { label: "Closed", tone: "text-ink-300 border-ink-50/10 bg-ink-50/5" },
   cancelled: { label: "Cancelled", tone: "text-ink-300 border-ink-50/10 bg-ink-50/5" },
 };
@@ -72,14 +73,18 @@ export default async function BuyerDashboard({
 }) {
   const user = await requireUser("/buyer/dashboard");
   const { new: newId } = await searchParams;
-  const [requests, alsoNeed] = await Promise.all([getRequests(), getOtherCategories()]);
+  const [requests, alsoNeed, isAdmin] = await Promise.all([
+    getRequests(),
+    getOtherCategories(),
+    isAdminEmail(user.email),
+  ]);
 
   return (
     <>
-      <Header user={user} variant="solid" />
+      <Header user={user} isAdmin={isAdmin} variant="solid" />
       <main className="container-page py-12">
         {newId && (
-          <div className="mb-8 flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+          <div className="mb-8 flex items-center gap-3 rounded-2xl border border-emerald-400 bg-emerald-100 px-4 py-3 text-sm text-emerald-900">
             <CheckCircle2 className="h-5 w-5" />
             <span>
               Request submitted. Vetted security teams in your area are being

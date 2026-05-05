@@ -22,7 +22,7 @@ export default async function LoginPage({
       </p>
 
       {status === "verified" && (
-        <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="mt-6 rounded-xl border border-emerald-400 bg-emerald-100 px-4 py-3 text-sm text-emerald-900">
           Email verified. You can sign in now.
         </div>
       )}

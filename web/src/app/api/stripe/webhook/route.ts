@@ -2,6 +2,38 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/insforge";
+import {
+  sendAutoTopupFailed,
+  sendSubscriptionPastDue,
+  sendAdminEliteSignup,
+  sendAdminProPaymentFailed,
+  sendAdminAutoTopupFailed,
+} from "@/lib/email";
+import { listAdminEmails } from "@/lib/admin";
+import { recordCommissionForPayment } from "@/lib/referrals";
+
+type CommissionPayment = {
+  id: string;
+  pro_id: string;
+  kind: "credits" | "subscription";
+  amount_cents: number;
+};
+
+async function commissionFromSession(
+  insforge: ReturnType<typeof createAdminClient>,
+  sessionId: string
+) {
+  const row = await insforge.database
+    .from("payments")
+    .select("id, pro_id, kind, amount_cents")
+    .eq("stripe_session_id", sessionId)
+    .maybeSingle();
+  const data = row.data as CommissionPayment | null;
+  if (!data) return;
+  await recordCommissionForPayment(data).catch((e) =>
+    console.error("[referrals] record commission failed:", e)
+  );
+}
 
 // Stripe needs the raw body to verify the signature, so opt out of
 // Next.js body parsing and use Edge-compatible APIs.
@@ -124,6 +156,8 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
     if (session.metadata?.vanguard_save_card === "true") {
       await rememberDefaultCard(proId, session.payment_intent);
     }
+
+    await commissionFromSession(insforge, session.id);
   }
 
   if (kind === "subscription") {
@@ -156,6 +190,30 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
         stripe_subscription_id: subId,
       })
       .eq("stripe_session_id", session.id);
+
+    // Operational alert to admins for a new Elite Pro signup — high-value
+    // event worth a personal welcome.
+    if (slug === "sub-elite") {
+      const proRow = await insforge.database
+        .from("pros")
+        .select("company_name, contact_email")
+        .eq("id", proId)
+        .maybeSingle();
+      const pro = proRow.data as
+        | { company_name: string; contact_email: string | null }
+        | null;
+      const recipients = await listAdminEmails();
+      if (pro && recipients.length > 0) {
+        await sendAdminEliteSignup({
+          to: recipients,
+          proCompany: pro.company_name,
+          proId,
+          contactEmail: pro.contact_email,
+        }).catch((e) => console.error("[email] admin elite alert:", e));
+      }
+    }
+
+    await commissionFromSession(insforge, session.id);
   }
 }
 
@@ -224,24 +282,35 @@ async function onInvoicePaid(invoice: Stripe.Invoice) {
     .maybeSingle();
   if (existing.data) return;
 
-  await insforge.database.from("payments").insert([
-    {
-      pro_id: pro.data.id,
-      stripe_session_id: invoice.id ?? `inv_${Date.now()}`,
-      stripe_subscription_id:
-        typeof invoice.parent?.subscription_details?.subscription === "string"
-          ? invoice.parent.subscription_details.subscription
-          : null,
-      kind: "subscription",
-      product_slug: "renewal",
-      credits_granted: 0,
-      amount_cents: invoice.amount_paid ?? 0,
-      currency: invoice.currency ?? "usd",
-      status: "succeeded",
-      succeeded_at: new Date().toISOString(),
-      raw_metadata: { invoice_number: invoice.number ?? null } as object,
-    },
-  ]);
+  const ins = await insforge.database
+    .from("payments")
+    .insert([
+      {
+        pro_id: pro.data.id,
+        stripe_session_id: invoice.id ?? `inv_${Date.now()}`,
+        stripe_subscription_id:
+          typeof invoice.parent?.subscription_details?.subscription === "string"
+            ? invoice.parent.subscription_details.subscription
+            : null,
+        kind: "subscription",
+        product_slug: "renewal",
+        credits_granted: 0,
+        amount_cents: invoice.amount_paid ?? 0,
+        currency: invoice.currency ?? "usd",
+        status: "succeeded",
+        succeeded_at: new Date().toISOString(),
+        raw_metadata: { invoice_number: invoice.number ?? null } as object,
+      },
+    ])
+    .select("id, pro_id, kind, amount_cents")
+    .maybeSingle();
+
+  const row = ins.data as CommissionPayment | null;
+  if (row) {
+    await recordCommissionForPayment(row).catch((e) =>
+      console.error("[referrals] record commission failed:", e)
+    );
+  }
 }
 
 async function onInvoiceFailed(invoice: Stripe.Invoice) {
@@ -251,10 +320,38 @@ async function onInvoiceFailed(invoice: Stripe.Invoice) {
       : invoice.customer?.id ?? null;
   if (!customerId) return;
   const insforge = createAdminClient();
+  const pro = await insforge.database
+    .from("pros")
+    .select("id, company_name, contact_email")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
   await insforge.database
     .from("pros")
     .update({ subscription_status: "past_due" })
     .eq("stripe_customer_id", customerId);
+
+  const proRow = pro.data as
+    | { id: string; company_name: string; contact_email: string | null }
+    | null;
+  if (proRow?.contact_email) {
+    await sendSubscriptionPastDue({
+      to: proRow.contact_email,
+      proCompany: proRow.company_name,
+    }).catch((e) => console.error("[email] subscription past_due failed:", e));
+  }
+  if (proRow) {
+    const recipients = await listAdminEmails();
+    if (recipients.length > 0) {
+      await sendAdminProPaymentFailed({
+        to: recipients,
+        proCompany: proRow.company_name,
+        proId: proRow.id,
+        reason: "invoice_payment_failed",
+        amountCents: invoice.amount_due ?? 0,
+      }).catch((e) => console.error("[email] admin invoice failed alert:", e));
+    }
+  }
 }
 
 async function onPaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
@@ -278,20 +375,31 @@ async function onPaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
     .update({ credits: current + credits })
     .eq("id", proId);
 
-  await insforge.database.from("payments").insert([
-    {
-      pro_id: proId,
-      stripe_session_id: pi.id,
-      stripe_payment_intent_id: pi.id,
-      kind: "credits",
-      product_slug: pi.metadata?.vanguard_slug ?? "auto_topup",
-      credits_granted: credits,
-      amount_cents: pi.amount_received,
-      status: "succeeded",
-      succeeded_at: new Date().toISOString(),
-      raw_metadata: { auto_topup: true } as object,
-    },
-  ]);
+  const ins = await insforge.database
+    .from("payments")
+    .insert([
+      {
+        pro_id: proId,
+        stripe_session_id: pi.id,
+        stripe_payment_intent_id: pi.id,
+        kind: "credits",
+        product_slug: pi.metadata?.vanguard_slug ?? "auto_topup",
+        credits_granted: credits,
+        amount_cents: pi.amount_received,
+        status: "succeeded",
+        succeeded_at: new Date().toISOString(),
+        raw_metadata: { auto_topup: true } as object,
+      },
+    ])
+    .select("id, pro_id, kind, amount_cents")
+    .maybeSingle();
+
+  const row = ins.data as CommissionPayment | null;
+  if (row) {
+    await recordCommissionForPayment(row).catch((e) =>
+      console.error("[referrals] record commission failed:", e)
+    );
+  }
 }
 
 async function onPaymentIntentFailed(pi: Stripe.PaymentIntent) {
@@ -301,8 +409,40 @@ async function onPaymentIntentFailed(pi: Stripe.PaymentIntent) {
     .update({ status: "failed" })
     .eq("stripe_payment_intent_id", pi.id);
 
+  // Auto-topup specific: alert the pro so they can re-auth or update card.
+  if (pi.metadata?.vanguard_kind === "auto_topup") {
+    const proId = pi.metadata?.vanguard_pro_id;
+    if (!proId) return;
+    const pro = await insforge.database
+      .from("pros")
+      .select("company_name, contact_email")
+      .eq("id", proId)
+      .maybeSingle();
+    const proRow = pro.data as
+      | { company_name: string; contact_email: string | null }
+      | null;
+    if (proRow?.contact_email) {
+      await sendAutoTopupFailed({
+        to: proRow.contact_email,
+        proCompany: proRow.company_name,
+        errorCode: pi.last_payment_error?.code ?? null,
+      }).catch((e) => console.error("[email] auto-topup failed alert:", e));
+    }
+    if (proRow) {
+      const recipients = await listAdminEmails();
+      if (recipients.length > 0) {
+        await sendAdminAutoTopupFailed({
+          to: recipients,
+          proCompany: proRow.company_name,
+          proId,
+          errorCode: pi.last_payment_error?.code ?? null,
+        }).catch((e) => console.error("[email] admin auto-topup alert:", e));
+      }
+    }
+  }
+
   // Don't disable auto top-up automatically — Stripe will retry per the
-  // customer's saved card SCA / 3DS rules. Surface in the dashboard later.
+  // customer's saved card SCA / 3DS rules.
 }
 
 async function onPaymentMethodAttached(pm: Stripe.PaymentMethod) {

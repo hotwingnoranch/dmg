@@ -1,10 +1,12 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { HeroSearch } from "@/components/HeroSearch";
 import { ServiceCard } from "@/components/ServiceCard";
 import { createServerClient } from "@/lib/insforge";
 import { getCurrentUser } from "@/lib/auth";
+import { isAdminEmail } from "@/lib/admin";
 import { categoryImage, PRO_HERO } from "@/lib/images";
 import { CheckCircle2, ShieldCheck, Clock, Star, ArrowRight } from "lucide-react";
 
@@ -30,10 +32,11 @@ async function getCategories(): Promise<Category[]> {
 export default async function Page() {
   const [user, categories] = await Promise.all([getCurrentUser(), getCategories()]);
   const featured = categories.slice(0, 8);
+  const isAdmin = await isAdminEmail(user?.email);
 
   return (
     <>
-      <Header user={user} />
+      <Header user={user} isAdmin={isAdmin} showSearch />
 
       {/* HERO */}
       <section className="relative overflow-hidden bg-vanguard-wash">
@@ -107,7 +110,6 @@ export default async function Page() {
               name={c.name}
               description={c.description ?? undefined}
               image={categoryImage(c.slug)}
-              size={i === 0 || i === 5 ? "tall" : "default"}
               badge={i % 3 === 0 ? "Available 24/7" : undefined}
             />
           ))}
@@ -293,16 +295,79 @@ export default async function Page() {
               </div>
             </div>
             <div
-              className="relative min-h-[280px] bg-cover bg-center lg:min-h-0"
-              style={{ backgroundImage: `url(${PRO_HERO})` }}
+              className="relative min-h-[280px] lg:min-h-0"
               aria-hidden
             >
+              <Image
+                src={PRO_HERO}
+                alt=""
+                fill
+                sizes="(min-width: 1024px) 40vw, 100vw"
+                className="object-cover"
+              />
               <span className="absolute inset-0 bg-gradient-to-l from-transparent via-navy-900/30 to-navy-900" />
               <span className="absolute bottom-6 right-6 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs font-medium text-white backdrop-blur">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-glow shadow-[0_0_8px] shadow-amber-glow" />
                 Live leads
               </span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* AFFILIATES STRIP */}
+      <section className="container-page py-20">
+        <div className="card-elev relative overflow-hidden p-10 lg:p-14">
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10 bg-gradient-to-br from-amber-accent/5 via-transparent to-amber-accent/10"
+          />
+          <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-center">
+            <div>
+              <p className="eyebrow">For affiliates</p>
+              <h2 className="display-h2 mt-3 text-balance">
+                Refer security pros.{" "}
+                <em className="not-italic font-display italic text-amber-accent">
+                  Earn for a year.
+                </em>
+              </h2>
+              <p className="mt-4 max-w-xl text-base text-ink-300">
+                Free referral program, no application, no cap. Earn{" "}
+                <span className="font-medium text-ink-50">20%</span> on a
+                pro&apos;s first credit purchase plus{" "}
+                <span className="font-medium text-ink-50">15%</span> on every
+                subscription invoice for 12 months.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link href="/affiliates" className="btn-primary">
+                  Learn more
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link href="/affiliates/marketing-docs" className="btn-outline">
+                  Marketing materials
+                </Link>
+              </div>
+            </div>
+            <ul className="grid gap-3 self-start text-sm">
+              <li className="flex items-baseline justify-between gap-3 rounded-xl border border-ink-700 bg-white p-4">
+                <span className="text-ink-300">First credit pack</span>
+                <span className="font-display text-2xl font-bold text-amber-accent">
+                  20%
+                </span>
+              </li>
+              <li className="flex items-baseline justify-between gap-3 rounded-xl border border-amber-accent bg-amber-accent/5 p-4">
+                <span className="text-ink-300">Subscription invoices · 12 months</span>
+                <span className="font-display text-2xl font-bold text-amber-accent">
+                  15%
+                </span>
+              </li>
+              <li className="flex items-baseline justify-between gap-3 rounded-xl border border-ink-700 bg-white p-4">
+                <span className="text-ink-300">Job commission Vanguard takes</span>
+                <span className="font-display text-2xl font-bold text-emerald-700">
+                  0%
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
       </section>

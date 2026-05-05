@@ -1,10 +1,11 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { RequestForm } from "./RequestForm";
 import { createServerClient } from "@/lib/insforge";
 import { getCurrentUser } from "@/lib/auth";
-import { categoryImage } from "@/lib/images";
+import { categoryImageForRequest } from "@/lib/images";
 
 type Category = { id: string; slug: string; name: string; description: string | null };
 
@@ -43,13 +44,18 @@ export default async function NewRequestPage({
             </p>
 
             <div
-              className="mt-8 overflow-hidden rounded-2xl border border-ink-50/5 bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${categoryImage(selected?.slug ?? "security-guard")})`,
-                aspectRatio: "4 / 3",
-              }}
+              className="relative mt-8 overflow-hidden rounded-2xl border border-ink-50/5"
+              style={{ aspectRatio: "4 / 3" }}
             >
-              <div className="flex h-full flex-col justify-end bg-gradient-to-t from-black via-black/40 to-transparent p-5 text-white">
+              <Image
+                src={categoryImageForRequest(selected?.slug ?? "security-guard")}
+                alt={selected?.name ?? "Security"}
+                fill
+                sizes="(min-width: 1024px) 33vw, 100vw"
+                className="object-cover"
+                priority
+              />
+              <div className="relative z-10 flex h-full flex-col justify-end bg-gradient-to-t from-black via-black/40 to-transparent p-5 text-white">
                 <p className="text-xs uppercase tracking-[0.22em] text-amber-accent">
                   Selected service
                 </p>

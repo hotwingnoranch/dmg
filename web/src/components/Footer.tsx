@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Logo } from "./Logo";
+import { LogoFull } from "./Logo";
 
 const sections = [
   {
@@ -45,8 +45,8 @@ export function Footer() {
       <div className="container-page py-16">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
           <div className="max-w-sm">
-            <Logo />
-            <p className="mt-4 text-sm text-ink-300">
+            <LogoFull width={300} />
+            <p className="mt-6 text-sm text-ink-300">
               Vanguard is the vetted directory for private security,
               protection, and risk services. Background-checked,
               license-verified, on call across the United States.

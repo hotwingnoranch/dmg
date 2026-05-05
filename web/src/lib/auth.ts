@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerClient } from "./insforge";
 
@@ -14,11 +14,32 @@ const baseCookie = {
   path: "/",
 };
 
-export async function setAuthCookies(accessToken: string, refreshToken?: string) {
+export const ACCESS_TOKEN_MAX_AGE = 60 * 60; // 1 hour
+export const REFRESH_TOKEN_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+export const REFRESH_TOKEN_REMEMBER_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+
+export async function setAuthCookies(
+  accessToken: string,
+  refreshToken?: string,
+  opts?: { remember?: boolean }
+) {
   const store = await cookies();
-  store.set(ACCESS, accessToken, { ...baseCookie, maxAge: 60 * 15 });
+  // Access token always 1h — proxy refreshes silently from the refresh
+  // cookie. Refresh cookie persistence is what "Remember me" controls:
+  // - remember=true  → 30-day persistent cookie
+  // - remember=false → session cookie (no maxAge; browser drops on close)
+  store.set(ACCESS, accessToken, { ...baseCookie, maxAge: ACCESS_TOKEN_MAX_AGE });
   if (refreshToken) {
-    store.set(REFRESH, refreshToken, { ...baseCookie, maxAge: 60 * 60 * 24 * 7 });
+    if (opts?.remember === false) {
+      // Omit maxAge → browser-session cookie.
+      store.set(REFRESH, refreshToken, baseCookie);
+    } else {
+      const maxAge =
+        opts?.remember === true
+          ? REFRESH_TOKEN_REMEMBER_MAX_AGE
+          : REFRESH_TOKEN_MAX_AGE;
+      store.set(REFRESH, refreshToken, { ...baseCookie, maxAge });
+    }
   }
 }
 
@@ -50,12 +71,21 @@ export type SessionUser = {
   id: string;
   email?: string;
   name?: string;
+  avatarUrl?: string | null;
 };
 
-export async function requireUser(redirectTo: string): Promise<SessionUser> {
+export async function requireUser(fallbackPath: string): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) {
-    redirect(`/login?next=${encodeURIComponent(redirectTo)}`);
+    // Prefer the proxy-provided current pathname so users bounce back to
+    // the page they were trying to reach, not always the dashboard.
+    const h = await headers();
+    const fromProxy = h.get("x-pathname");
+    const target =
+      fromProxy && fromProxy.startsWith("/") && !fromProxy.startsWith("//")
+        ? fromProxy
+        : fallbackPath;
+    redirect(`/login?next=${encodeURIComponent(target)}`);
   }
   return user;
 }
@@ -73,7 +103,24 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     email?: string;
     profile?: { name?: string } | null;
   };
-  return { id: u.id, email: u.email, name: u.profile?.name };
+
+  // Pull avatar_url so the Header / UserMenu can render it on every page
+  // for the signed-in user without each caller wiring it through.
+  let avatarUrl: string | null = null;
+  try {
+    const profileRes = await insforge.database
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", u.id)
+      .maybeSingle();
+    avatarUrl =
+      (profileRes.data as { avatar_url: string | null } | null)?.avatar_url ??
+      null;
+  } catch {
+    // Best-effort — auth still works without the avatar.
+  }
+
+  return { id: u.id, email: u.email, name: u.profile?.name, avatarUrl };
 }
 
 export async function getCurrentProfile() {

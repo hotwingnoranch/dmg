@@ -92,8 +92,18 @@ export function findSubscriptionTier(slug: string) {
   return SUBSCRIPTION_TIERS.find((t) => t.slug === slug);
 }
 
-export function formatPrice(cents: number, currency = "usd") {
-  if (cents === 0) return "Free";
+export function formatPrice(
+  cents: number,
+  currency = "usd",
+  /**
+   * Override the label shown when the amount is exactly zero. The default
+   * is a numeric `$0` because most surfaces (revenue, MRR, payouts) read
+   * better that way. Pass `"Free"` on subscription-tier cards where a
+   * Standard plan should render as the word.
+   */
+  zeroLabel: string = "$0"
+) {
+  if (cents === 0) return zeroLabel;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,

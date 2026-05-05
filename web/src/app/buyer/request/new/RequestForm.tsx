@@ -177,7 +177,7 @@ export function RequestForm({
       </FieldGroup>
 
       {state.status === "error" && (
-        <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+        <p className="rounded-lg border border-red-400 bg-red-100 px-3 py-2 text-sm text-red-900">
           {state.message}
         </p>
       )}

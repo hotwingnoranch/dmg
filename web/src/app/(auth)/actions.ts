@@ -1,8 +1,10 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/insforge";
 import { setAuthCookies, clearAuthCookies } from "@/lib/auth";
+import { attributeReferral, REF_COOKIE } from "@/lib/referrals";
 
 export type AuthState =
   | { status: "idle" }
@@ -47,6 +49,7 @@ export async function signUpAction(
   if (data?.accessToken) {
     await setAuthCookies(data.accessToken, data.refreshToken);
     await ensureProfile(data.accessToken, { name });
+    await consumeReferralCookie(data.accessToken);
     return { status: "ok", redirectTo };
   }
 
@@ -73,6 +76,7 @@ export async function verifyEmailAction(
   }
   await setAuthCookies(data.accessToken, data.refreshToken);
   await ensureProfile(data.accessToken, { name });
+  await consumeReferralCookie(data.accessToken);
   return { status: "ok", redirectTo };
 }
 
@@ -82,6 +86,7 @@ export async function signInAction(
 ): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const remember = formData.get("remember") === "on";
   const redirectTo = getRedirect(formData, "/");
 
   if (!email || !password) {
@@ -93,13 +98,34 @@ export async function signInAction(
   if (error || !data?.accessToken) {
     return { status: "error", message: error?.message ?? "Could not sign in." };
   }
-  await setAuthCookies(data.accessToken, data.refreshToken);
+  await setAuthCookies(data.accessToken, data.refreshToken, { remember });
   return { status: "ok", redirectTo };
 }
 
 export async function signOutAction() {
   await clearAuthCookies();
   redirect("/");
+}
+
+async function consumeReferralCookie(accessToken: string) {
+  try {
+    const store = await cookies();
+    const code = store.get(REF_COOKIE)?.value;
+    if (!code) return;
+
+    // Identify the just-signed-up user via their fresh access token.
+    const insforge = createServerClient(accessToken);
+    const me = await insforge.auth.getCurrentUser();
+    const userId = me.data?.user?.id;
+    if (!userId) return;
+
+    await attributeReferral(userId, code);
+    // Clear the cookie so a later signup on the same device doesn't
+    // re-attribute (each user can only be attributed once anyway).
+    store.delete(REF_COOKIE);
+  } catch (e) {
+    console.error("[referrals] consume cookie failed:", e);
+  }
 }
 
 async function ensureProfile(accessToken: string, opts: { name?: string }) {

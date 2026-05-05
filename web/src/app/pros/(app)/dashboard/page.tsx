@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { createServerClient } from "@/lib/insforge";
 import { getAccessToken, requireUser } from "@/lib/auth";
 import { ArrowRight, BadgeCheck, MapPin, Mail, Star } from "lucide-react";
@@ -25,17 +26,27 @@ export default async function ProDashboardPage({
   const token = await getAccessToken();
   const insforge = createServerClient(token);
 
-  const proRes = await insforge.database
-    .from("pros")
-    .select(
-      "id, company_name, is_elite, credits, rating_avg, review_count, contact_email, hires_count, response_time_minutes"
-    )
-    .eq("id", user.id)
-    .maybeSingle();
+  const [proRes, profileRes] = await Promise.all([
+    insforge.database
+      .from("pros")
+      .select(
+        "id, company_name, is_elite, credits, rating_avg, review_count, contact_email, hires_count, response_time_minutes"
+      )
+      .eq("id", user.id)
+      .maybeSingle(),
+    insforge.database
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
   const pro = proRes.data as ProRow | null;
   if (!pro) {
     return null;
   }
+  const avatarUrl =
+    (profileRes.data as { avatar_url: string | null } | null)?.avatar_url ??
+    null;
 
   const services = await insforge.database
     .from("pro_services")
@@ -75,7 +86,7 @@ export default async function ProDashboardPage({
       </div>
 
       {setup === "1" && (
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-100">
+        <div className="rounded-2xl border border-emerald-400 bg-emerald-100 px-5 py-4 text-sm text-emerald-900">
           Your Pro profile is live. We&apos;ll start sending matching leads
           shortly.
         </div>
@@ -85,8 +96,18 @@ export default async function ProDashboardPage({
         {/* Profile card */}
         <section className="card p-6">
           <div className="flex items-center gap-3">
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-amber-accent/15 font-display text-lg text-amber-accent">
-              {pro.company_name.charAt(0)}
+            <span className="relative grid h-12 w-12 flex-none place-items-center overflow-hidden rounded-full bg-amber-accent/15 font-display text-lg text-amber-accent">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt=""
+                  fill
+                  sizes="48px"
+                  className="object-cover"
+                />
+              ) : (
+                pro.company_name.charAt(0)
+              )}
             </span>
             <div>
               <p className="font-display text-xl font-bold leading-tight">

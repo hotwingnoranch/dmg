@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createServerClient } from "@/lib/insforge";
 import { getAccessToken } from "@/lib/auth";
+import { sendProWelcome } from "@/lib/email";
 
 export type ProSetupState =
   | { status: "idle" }
@@ -16,6 +17,19 @@ function slugify(input: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "")
     .slice(0, 60);
+}
+
+function normalizeUrl(input: string): string | null {
+  const v = input.trim();
+  if (!v) return null;
+  // Prepend https:// if the user typed a bare host like "example.com".
+  const candidate = /^https?:\/\//i.test(v) ? v : `https://${v}`;
+  try {
+    const u = new URL(candidate);
+    return u.toString();
+  } catch {
+    return null;
+  }
 }
 
 export async function setupProAction(
@@ -39,6 +53,8 @@ export async function setupProAction(
   const years = yearsRaw ? Number(yearsRaw) : null;
   const staff = String(formData.get("staff") ?? "").trim() || null;
   const phone = String(formData.get("phone") ?? "").trim() || null;
+  const websiteRaw = String(formData.get("website") ?? "").trim();
+  const website = normalizeUrl(websiteRaw);
   const zip = String(formData.get("zip") ?? "").trim();
   const radius = Number(String(formData.get("radius") ?? "50"));
   const services = formData.getAll("services").map(String).filter(Boolean);
@@ -72,6 +88,7 @@ export async function setupProAction(
       bio,
       years_in_business: years,
       staff_size: staff,
+      website,
       contact_email: me.data.user.email ?? null,
       is_published: true,
     },
@@ -101,6 +118,14 @@ export async function setupProAction(
   await insforge.database
     .from("service_areas")
     .insert([{ pro_id: userId, zip_code: zip, radius_miles: radius || 50 }]);
+
+  // Welcome email — fire-and-await; failures must not block onboarding.
+  if (me.data.user.email) {
+    await sendProWelcome({
+      to: me.data.user.email,
+      proCompany: companyName,
+    }).catch((e) => console.error("[email] pro welcome failed:", e));
+  }
 
   redirect("/pros/dashboard?setup=1");
 }

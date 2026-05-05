@@ -79,7 +79,7 @@ export default async function ProResponsesPage({
                 className={`pill ${
                   active === "pending"
                     ? "border-amber-accent/30 text-amber-accent"
-                    : "border-emerald-500/30 text-emerald-300"
+                    : "border-emerald-500/30 text-emerald-800"
                 }`}
               >
                 {active === "pending" ? "Pending" : "Hired"}
